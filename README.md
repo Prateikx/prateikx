@@ -1,1 +1,1 @@
-For more information, you can visit my website on [portfolio website](https://github.com/Prateikx).
+Want to see what I've been building? Check out my portfolio at [here!](https://prateikx.github.io/prateikx/).
