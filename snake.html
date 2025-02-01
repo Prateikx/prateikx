@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Snake Game with High Score & Multiple Controls</title>
+  <title>Snake Game with Top 3 Leaderboard & Unique Names</title>
   <style>
     /* Basic reset and full viewport styling */
     body {
@@ -55,11 +55,13 @@
       top: 10px;
       left: 10px;
       color: white;
-      font-size: 18px;
+      font-size: 16px;
       z-index: 20;
       background: rgba(0, 0, 0, 0.5);
       padding: 8px 12px;
       border-radius: 4px;
+      line-height: 1.5;
+      max-width: 250px;
     }
     /* Celebration message styling */
     .celebration {
@@ -76,7 +78,7 @@
     }
     @keyframes fadeOut {
       0% { opacity: 1; }
-      80% { opacity: 1; } /* Fully visible for 80% of 4s (3.2 seconds) */
+      80% { opacity: 1; }
       100% { opacity: 0; }
     }
   </style>
@@ -84,8 +86,7 @@
 <body>
   <!-- Scoreboard -->
   <div id="scoreboard">
-    Score: 0<br>
-    High Score: 0 (N/A)
+    <!-- This will be updated by JavaScript -->
   </div>
   <!-- Overlay instructions -->
   <div id="overlay">
@@ -119,8 +120,16 @@
     let gameInterval = null;
     let currentPlayer = "";            // Player name for the current session
 
+    // Leaderboard (top 3) storage
+    let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
     // Banned words list for harmful or sexual names (adjust as needed)
-    const bannedWords = ["fuck", "shit", "sex", "bitch", "ass", "cunt", "nigger", "faggot", "dick", "cock", "pussy", "badword", "anotherbadword", "sex", "xxx", "fuck"];
+    const bannedWords = [
+      // English profanity
+      "fuck", "shit", "sex", "bitch", "ass", "cunt", "nigger", "faggot", "dick", "cock", "pussy", "badword", "anotherbadword", "xxx", "fuck",
+      // Common Hindi profanity (offensive terms)
+      "madarchod", "chutiya", "bhosdike", "bhadve", "randi", "gandu", "harami", "kamina", "launda", "saala", "bhosadi", "kaminey"
+    ];
 
     // Function to check if the name is valid (does not contain banned words)
     function isValidName(name) {
@@ -128,23 +137,32 @@
       return !bannedWords.some(banned => lowerName.includes(banned));
     }
 
-    // Retrieve high score from localStorage or set defaults
-    let storedHighScore = parseInt(localStorage.getItem("highScore")) || 0;
-    let storedHighScoreName = localStorage.getItem("highScoreName") || "N/A";
-
-    // Update the scoreboard display
+    // Update the scoreboard display to include current player's details and top 3 records.
     function updateScoreboard() {
       const currentScore = snake.length - initialSnakeLength;
+      
+      let leaderboardHTML = "";
+      if (leaderboard.length > 0) {
+        leaderboardHTML += "<strong>Top 3 Records:</strong><br>";
+        leaderboard.forEach((entry, index) => {
+          leaderboardHTML += `${index + 1}. ${entry.name} (${entry.score})<br>`;
+        });
+      } else {
+        leaderboardHTML += "No records yet<br>";
+      }
+      
       scoreboard.innerHTML =
-        `Score: ${currentScore}<br>` +
-        `High Score: ${storedHighScore} (${storedHighScoreName})`;
+        `<strong>Current Player:</strong> ${currentPlayer || "Anonymous"}<br>` +
+        `<strong>Score:</strong> ${currentScore}<br><br>` +
+        leaderboardHTML +
+        `<br><em>Your name will appear here if you break one of the top 3 records!</em>`;
     }
 
-    // Function to trigger celebration effect when a new high score is reached
+    // Function to trigger celebration effect when a new top record is reached
     function celebrate() {
       const celebration = document.createElement("div");
       celebration.className = "celebration";
-      celebration.innerHTML = "New High Score!";
+      celebration.innerHTML = "New Top Record!";
       document.body.appendChild(celebration);
       // Remove after 4 seconds
       setTimeout(() => {
@@ -199,9 +217,11 @@
       const head = snake[0];
       const newHead = { x: head.x + direction.x, y: head.y + direction.y };
 
+      // Check for wall collision
       if (newHead.x < 0 || newHead.x >= columns || newHead.y < 0 || newHead.y >= rows) {
         return endGame();
       }
+      // Check for self collision
       if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
         return endGame();
       }
@@ -220,34 +240,47 @@
     function draw() {
       ctx.fillStyle = '#333';
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      // Draw food
       ctx.fillStyle = '#e74c3c';
       ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+      // Draw snake
       snake.forEach((segment, index) => {
         ctx.fillStyle = index === 0 ? '#2ecc71' : '#27ae60';
         ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
       });
     }
 
-    // End the game, update high score, and manage overlay display.
+    // End the game, update leaderboard and manage overlay display.
     function endGame() {
       clearInterval(gameInterval);
       gameInterval = null;
       const currentScore = snake.length - initialSnakeLength;
-      if (currentScore > storedHighScore) {
-        celebrate();
-        storedHighScore = currentScore;
-        storedHighScoreName = currentPlayer || "Anonymous";
-        localStorage.setItem("highScore", storedHighScore);
-        localStorage.setItem("highScoreName", storedHighScoreName);
-        updateScoreboard();
-        // Delay overlay re-display until after the celebration finishes (4 seconds)
-        setTimeout(() => {
-          overlay.classList.remove('hidden');
-        }, 4000);
-      } else {
-        updateScoreboard();
-        overlay.classList.remove('hidden');
+      
+      // Determine if current score qualifies for top 3
+      let qualifies = false;
+      if (leaderboard.length < 3) {
+        qualifies = true;
+      } else if (leaderboard.length === 3 && currentScore > leaderboard[leaderboard.length - 1].score) {
+        qualifies = true;
       }
+      
+      if (qualifies) {
+        celebrate();
+        // Insert the new record into the leaderboard and sort it descending by score
+        leaderboard.push({ name: currentPlayer || "Anonymous", score: currentScore });
+        leaderboard.sort((a, b) => b.score - a.score);
+        // Keep only top 3
+        if (leaderboard.length > 3) {
+          leaderboard = leaderboard.slice(0, 3);
+        }
+        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+      }
+      
+      updateScoreboard();
+      // Delay overlay re-display until after the celebration finishes (if any)
+      setTimeout(() => {
+        overlay.classList.remove('hidden');
+      }, qualifies ? 4000 : 0);
     }
 
     // Listen for key presses
@@ -257,6 +290,19 @@
         let nameInput = prompt("Enter your name:", currentPlayer || "Anonymous");
         if (nameInput !== null) {
           let trimmed = nameInput.trim();
+          // If the name already exists in the leaderboard, ask for the full name.
+          while (
+            trimmed !== "" &&
+            leaderboard.some(entry => entry.name.toLowerCase() === trimmed.toLowerCase())
+          ) {
+            alert("This name is already in the leaderboard. Please provide your full name to avoid confusion.");
+            nameInput = prompt("Enter your full name:", trimmed);
+            if (nameInput === null) { // if user cancels during re-prompt
+              trimmed = "";
+              break;
+            }
+            trimmed = nameInput.trim();
+          }
           if (trimmed === "" || !isValidName(trimmed)) {
             alert("The name you entered is not allowed. Using 'Anonymous' instead.");
             currentPlayer = "Anonymous";
@@ -270,6 +316,7 @@
         overlay.classList.add('hidden');
         gameInterval = setInterval(update, gameSpeed);
       }
+      
       let newDir = null;
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
         newDir = { x: 0, y: -1 };
