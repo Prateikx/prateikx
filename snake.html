@@ -23,7 +23,7 @@
       border: 5px solid #555;
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }
-    /* Overlay message that appears before starting/restarting */
+    /* Overlay instructions before starting/restarting */
     #overlay {
       position: absolute;
       top: 0;
@@ -49,7 +49,7 @@
       margin-top: 10px;
       text-align: center;
     }
-    /* Scoreboard display in the top-left corner */
+    /* Scoreboard in the top-left corner */
     #scoreboard {
       position: fixed;
       top: 10px;
@@ -60,6 +60,24 @@
       background: rgba(0, 0, 0, 0.5);
       padding: 8px 12px;
       border-radius: 4px;
+    }
+    /* Celebration message styling */
+    .celebration {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: bold;
+      color: #FFD700;
+      z-index: 30;
+      animation: fadeOut 4s forwards;
+      pointer-events: none;
+    }
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      80% { opacity: 1; } /* Fully visible for 80% of 4s (3.2 seconds) */
+      100% { opacity: 0; }
     }
   </style>
 </head>
@@ -95,12 +113,20 @@
 
     // Game state variables
     let snake = [];
-    let direction = {x: 0, y: 0};
-    let pendingDirection = null;       // To queue new directions safely
-    let food = {x: 0, y: 0};
+    let direction = { x: 0, y: 0 };
+    let pendingDirection = null;       // Queue for new directions
+    let food = { x: 0, y: 0 };
     let gameInterval = null;
     let currentPlayer = "";            // Player name for the current session
-    let firstGame = true;              // Flag to indicate the very first game
+
+    // Banned words list for harmful or sexual names (adjust as needed)
+    const bannedWords = ["fuck", "shit", "sex", "bitch", "ass", "cunt", "nigger", "faggot", "dick", "cock", "pussy", "badword", "anotherbadword", "sex", "xxx", "fuck"];
+
+    // Function to check if the name is valid (does not contain banned words)
+    function isValidName(name) {
+      const lowerName = name.toLowerCase();
+      return !bannedWords.some(banned => lowerName.includes(banned));
+    }
 
     // Retrieve high score from localStorage or set defaults
     let storedHighScore = parseInt(localStorage.getItem("highScore")) || 0;
@@ -109,21 +135,31 @@
     // Update the scoreboard display
     function updateScoreboard() {
       const currentScore = snake.length - initialSnakeLength;
-      scoreboard.innerHTML = 
+      scoreboard.innerHTML =
         `Score: ${currentScore}<br>` +
         `High Score: ${storedHighScore} (${storedHighScoreName})`;
+    }
+
+    // Function to trigger celebration effect when a new high score is reached
+    function celebrate() {
+      const celebration = document.createElement("div");
+      celebration.className = "celebration";
+      celebration.innerHTML = "New High Score!";
+      document.body.appendChild(celebration);
+      // Remove after 4 seconds
+      setTimeout(() => {
+        celebration.remove();
+      }, 4000);
     }
 
     // Initialize the game state
     function initGame() {
       snake = [];
-      // Create a snake with initialSnakeLength segments starting from the middle of the canvas
       const startX = Math.floor(columns / 2);
       const startY = Math.floor(rows / 2);
       for (let i = 0; i < initialSnakeLength; i++) {
         snake.push({ x: startX - i, y: startY });
       }
-      // Pick a random starting direction (up, down, left, or right)
       const directions = [
         { x: 1, y: 0 },
         { x: -1, y: 0 },
@@ -146,16 +182,12 @@
       }
     }
 
-    // Update the game state
+    // Update game state
     function update() {
-      // Update direction from pendingDirection (if not a reversal)
       if (pendingDirection) {
         if (snake.length > 1) {
-          // Prevent reversing onto itself
-          if (snake[0].x + pendingDirection.x === snake[1].x &&
-              snake[0].y + pendingDirection.y === snake[1].y) {
-            // Ignore reversal
-          } else {
+          if (!(snake[0].x + pendingDirection.x === snake[1].x &&
+                snake[0].y + pendingDirection.y === snake[1].y)) {
             direction = pendingDirection;
           }
         } else {
@@ -164,28 +196,21 @@
         pendingDirection = null;
       }
       
-      // Calculate new head position
       const head = snake[0];
       const newHead = { x: head.x + direction.x, y: head.y + direction.y };
 
-      // Check collision with walls
       if (newHead.x < 0 || newHead.x >= columns || newHead.y < 0 || newHead.y >= rows) {
         return endGame();
       }
-
-      // Check collision with self
       if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
         return endGame();
       }
-
-      // Add new head to the snake
+      
       snake.unshift(newHead);
-
-      // Check if food is eaten
       if (newHead.x === food.x && newHead.y === food.y) {
-        placeFood();  // Place new food
+        placeFood();
       } else {
-        snake.pop();  // Remove the tail segment if no food eaten
+        snake.pop();
       }
       updateScoreboard();
       draw();
@@ -193,59 +218,58 @@
 
     // Draw the current game state
     function draw() {
-      // Clear the canvas
       ctx.fillStyle = '#333';
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-      // Draw the food
       ctx.fillStyle = '#e74c3c';
       ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
-
-      // Draw the snake (head in a lighter green, body in a darker green)
       snake.forEach((segment, index) => {
         ctx.fillStyle = index === 0 ? '#2ecc71' : '#27ae60';
         ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
       });
     }
 
-    // End the game, stop the loop, and show the overlay.
-    // Also update high score if the current score beats it.
+    // End the game, update high score, and manage overlay display.
     function endGame() {
       clearInterval(gameInterval);
       gameInterval = null;
       const currentScore = snake.length - initialSnakeLength;
       if (currentScore > storedHighScore) {
+        celebrate();
         storedHighScore = currentScore;
-        // Update high score with the current player's name.
         storedHighScoreName = currentPlayer || "Anonymous";
         localStorage.setItem("highScore", storedHighScore);
         localStorage.setItem("highScoreName", storedHighScoreName);
+        updateScoreboard();
+        // Delay overlay re-display until after the celebration finishes (4 seconds)
+        setTimeout(() => {
+          overlay.classList.remove('hidden');
+        }, 4000);
+      } else {
+        updateScoreboard();
+        overlay.classList.remove('hidden');
       }
-      updateScoreboard();
-      overlay.classList.remove('hidden');
     }
 
     // Listen for key presses
     document.addEventListener('keydown', (e) => {
-      // Start or restart the game with Space
       if (e.code === 'Space') {
-        if (gameInterval) return; // If game is running, ignore
-        // Prompt for player's name only on the first game.
-        if (firstGame) {
-          let nameInput = prompt("Enter your name:", "Anonymous");
-          if (nameInput !== null && nameInput.trim() !== "") {
-            currentPlayer = nameInput.trim();
-          } else {
+        // Prompt for player's name on each game start.
+        let nameInput = prompt("Enter your name:", currentPlayer || "Anonymous");
+        if (nameInput !== null) {
+          let trimmed = nameInput.trim();
+          if (trimmed === "" || !isValidName(trimmed)) {
+            alert("The name you entered is not allowed. Using 'Anonymous' instead.");
             currentPlayer = "Anonymous";
+          } else {
+            currentPlayer = trimmed;
           }
-          firstGame = false;
+        } else {
+          currentPlayer = "Anonymous";
         }
         initGame();
         overlay.classList.add('hidden');
         gameInterval = setInterval(update, gameSpeed);
       }
-      // Determine new direction based on key pressed.
-      // Supports both WASD and Arrow keys.
       let newDir = null;
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
         newDir = { x: 0, y: -1 };
@@ -261,7 +285,7 @@
       }
     });
 
-    // Draw the initial state (before game start)
+    // Draw initial state and update scoreboard.
     draw();
     updateScoreboard();
   </script>
