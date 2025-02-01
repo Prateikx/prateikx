@@ -137,9 +137,9 @@
       return !bannedWords.some(banned => lowerName.includes(banned));
     }
 
-    // Force "Prateik" with a score of 112 into the leaderboard.
-    function forcePrateikRecord() {
-      const forcedRecord = { name: "Prateik", score: 112 };
+    // Force "Varun" with a score of 112 into the leaderboard.
+    function forceVarunRecord() {
+      const forcedRecord = { name: "Varun", score: 112 };
       // Check if the record already exists (ignoring case)
       const index = leaderboard.findIndex(entry => entry.name.toLowerCase() === forcedRecord.name.toLowerCase());
       if (index !== -1) {
@@ -151,8 +151,8 @@
 
     // Update the scoreboard display to include current player's details and top 3 records.
     function updateScoreboard() {
-      // Always force "Prateik" into the leaderboard before displaying.
-      forcePrateikRecord();
+      // Always force "Varun" into the leaderboard before displaying.
+      forceVarunRecord();
 
       // Sort the leaderboard descending by score.
       leaderboard.sort((a, b) => b.score - a.score);
@@ -293,7 +293,7 @@
         // Insert the new record into the leaderboard and sort it descending by score
         leaderboard.push({ name: currentPlayer || "Anonymous", score: currentScore });
         leaderboard.sort((a, b) => b.score - a.score);
-        // Keep only top 3 (forcePrateikRecord() in updateScoreboard() will add your record if needed)
+        // Keep only top 3 (forceVarunRecord() in updateScoreboard() will add your record if needed)
         if (leaderboard.length > 3) {
           leaderboard = leaderboard.slice(0, 3);
         }
