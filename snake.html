@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Snake Game with High Score & Multiple Controls</title>
+  <style>
+    /* Basic reset and full viewport styling */
+    body {
+      margin: 0;
+      background: #222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      color: white;
+      overflow: hidden;
+      position: relative;
+    }
+    /* Style for the game canvas */
+    canvas {
+      background: #333;
+      border: 5px solid #555;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    /* Overlay message that appears before starting/restarting */
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #overlay.hidden {
+      display: none;
+    }
+    #overlay h1 {
+      font-size: 48px;
+      margin: 0;
+    }
+    #overlay p {
+      font-size: 24px;
+      margin-top: 10px;
+      text-align: center;
+    }
+    /* Scoreboard display in the top-left corner */
+    #scoreboard {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 18px;
+      z-index: 20;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 12px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Scoreboard -->
+  <div id="scoreboard">
+    Score: 0<br>
+    High Score: 0 (N/A)
+  </div>
+  <!-- Overlay instructions -->
+  <div id="overlay">
+    <h1>Snake Game</h1>
+    <p>Press Space to Start / Restart</p>
+    <p>Use W, A, S, D keys or the Arrow keys to control the snake</p>
+  </div>
+  <!-- Game Canvas -->
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const scoreboard = document.getElementById('scoreboard');
+
+    // Configuration values
+    const gridSize = 20;               // Pixel size of each cell
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const columns = canvasWidth / gridSize;
+    const rows = canvasHeight / gridSize;
+    const gameSpeed = 100;             // Speed (in milliseconds) of game update
+    const initialSnakeLength = 5;      // Starting length of the snake
+
+    // Game state variables
+    let snake = [];
+    let direction = {x: 0, y: 0};
+    let pendingDirection = null;       // To queue new directions safely
+    let food = {x: 0, y: 0};
+    let gameInterval = null;
+    let currentPlayer = "";            // Player name for the current session
+    let firstGame = true;              // Flag to indicate the very first game
+
+    // Retrieve high score from localStorage or set defaults
+    let storedHighScore = parseInt(localStorage.getItem("highScore")) || 0;
+    let storedHighScoreName = localStorage.getItem("highScoreName") || "N/A";
+
+    // Update the scoreboard display
+    function updateScoreboard() {
+      const currentScore = snake.length - initialSnakeLength;
+      scoreboard.innerHTML = 
+        `Score: ${currentScore}<br>` +
+        `High Score: ${storedHighScore} (${storedHighScoreName})`;
+    }
+
+    // Initialize the game state
+    function initGame() {
+      snake = [];
+      // Create a snake with initialSnakeLength segments starting from the middle of the canvas
+      const startX = Math.floor(columns / 2);
+      const startY = Math.floor(rows / 2);
+      for (let i = 0; i < initialSnakeLength; i++) {
+        snake.push({ x: startX - i, y: startY });
+      }
+      // Pick a random starting direction (up, down, left, or right)
+      const directions = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 }
+      ];
+      direction = directions[Math.floor(Math.random() * directions.length)];
+      pendingDirection = direction;
+      placeFood();
+      updateScoreboard();
+    }
+
+    // Place food in a random location not occupied by the snake
+    function placeFood() {
+      let valid = false;
+      while (!valid) {
+        food.x = Math.floor(Math.random() * columns);
+        food.y = Math.floor(Math.random() * rows);
+        valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
+      }
+    }
+
+    // Update the game state
+    function update() {
+      // Update direction from pendingDirection (if not a reversal)
+      if (pendingDirection) {
+        if (snake.length > 1) {
+          // Prevent reversing onto itself
+          if (snake[0].x + pendingDirection.x === snake[1].x &&
+              snake[0].y + pendingDirection.y === snake[1].y) {
+            // Ignore reversal
+          } else {
+            direction = pendingDirection;
+          }
+        } else {
+          direction = pendingDirection;
+        }
+        pendingDirection = null;
+      }
+      
+      // Calculate new head position
+      const head = snake[0];
+      const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+
+      // Check collision with walls
+      if (newHead.x < 0 || newHead.x >= columns || newHead.y < 0 || newHead.y >= rows) {
+        return endGame();
+      }
+
+      // Check collision with self
+      if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+        return endGame();
+      }
+
+      // Add new head to the snake
+      snake.unshift(newHead);
+
+      // Check if food is eaten
+      if (newHead.x === food.x && newHead.y === food.y) {
+        placeFood();  // Place new food
+      } else {
+        snake.pop();  // Remove the tail segment if no food eaten
+      }
+      updateScoreboard();
+      draw();
+    }
+
+    // Draw the current game state
+    function draw() {
+      // Clear the canvas
+      ctx.fillStyle = '#333';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Draw the food
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+
+      // Draw the snake (head in a lighter green, body in a darker green)
+      snake.forEach((segment, index) => {
+        ctx.fillStyle = index === 0 ? '#2ecc71' : '#27ae60';
+        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+      });
+    }
+
+    // End the game, stop the loop, and show the overlay.
+    // Also update high score if the current score beats it.
+    function endGame() {
+      clearInterval(gameInterval);
+      gameInterval = null;
+      const currentScore = snake.length - initialSnakeLength;
+      if (currentScore > storedHighScore) {
+        storedHighScore = currentScore;
+        // Update high score with the current player's name.
+        storedHighScoreName = currentPlayer || "Anonymous";
+        localStorage.setItem("highScore", storedHighScore);
+        localStorage.setItem("highScoreName", storedHighScoreName);
+      }
+      updateScoreboard();
+      overlay.classList.remove('hidden');
+    }
+
+    // Listen for key presses
+    document.addEventListener('keydown', (e) => {
+      // Start or restart the game with Space
+      if (e.code === 'Space') {
+        if (gameInterval) return; // If game is running, ignore
+        // Prompt for player's name only on the first game.
+        if (firstGame) {
+          let nameInput = prompt("Enter your name:", "Anonymous");
+          if (nameInput !== null && nameInput.trim() !== "") {
+            currentPlayer = nameInput.trim();
+          } else {
+            currentPlayer = "Anonymous";
+          }
+          firstGame = false;
+        }
+        initGame();
+        overlay.classList.add('hidden');
+        gameInterval = setInterval(update, gameSpeed);
+      }
+      // Determine new direction based on key pressed.
+      // Supports both WASD and Arrow keys.
+      let newDir = null;
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+        newDir = { x: 0, y: -1 };
+      } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+        newDir = { x: -1, y: 0 };
+      } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+        newDir = { x: 0, y: 1 };
+      } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+        newDir = { x: 1, y: 0 };
+      }
+      if (newDir) {
+        pendingDirection = newDir;
+      }
+    });
+
+    // Draw the initial state (before game start)
+    draw();
+    updateScoreboard();
+  </script>
+</body>
+</html>
