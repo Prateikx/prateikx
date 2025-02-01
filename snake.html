@@ -118,10 +118,14 @@
     let pendingDirection = null;       // Queue for new directions
     let food = { x: 0, y: 0 };
     let gameInterval = null;
-    let currentPlayer = "";            // Player name for the current session
+    // Always set current player to "Prateik"
+    let currentPlayer = "Prateik";
 
-    // Leaderboard (top 3) storage
-    let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+    // Pre-populate the leaderboard with Prateik (112) and Varun (15)
+    let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [
+      { name: "Prateik", score: 112 },
+      { name: "Varun", score: 15 }
+    ];
 
     // Banned words list for harmful or sexual names (adjust as needed)
     const bannedWords = [
@@ -137,9 +141,13 @@
       return !bannedWords.some(banned => lowerName.includes(banned));
     }
 
-    // Update the scoreboard display to include current player's details and top 3 records.
+    // Update the scoreboard display
     function updateScoreboard() {
-      const currentScore = snake.length - initialSnakeLength;
+      // Calculate current score; if the current player is "Prateik", force score to 112.
+      // Otherwise, use snake.length - initialSnakeLength (ensuring a minimum of 0).
+      const currentScore = (currentPlayer === "Prateik")
+        ? 112
+        : Math.max(0, snake.length - initialSnakeLength);
       
       let leaderboardHTML = "";
       if (leaderboard.length > 0) {
@@ -152,7 +160,7 @@
       }
       
       scoreboard.innerHTML =
-        `<strong>Current Player:</strong> ${currentPlayer || "Anonymous"}<br>` +
+        `<strong>Current Player:</strong> ${currentPlayer}<br>` +
         `<strong>Score:</strong> ${currentScore}<br><br>` +
         leaderboardHTML +
         `<br><em>Your name will appear here if you break one of the top 3 records!</em>`;
@@ -254,7 +262,10 @@
     function endGame() {
       clearInterval(gameInterval);
       gameInterval = null;
-      const currentScore = snake.length - initialSnakeLength;
+      // Use the forced score for Prateik (112) or calculated score (ensuring a minimum of 0)
+      const currentScore = (currentPlayer === "Prateik")
+        ? 112
+        : Math.max(0, snake.length - initialSnakeLength);
       
       // Determine if current score qualifies for top 3
       let qualifies = false;
@@ -267,7 +278,7 @@
       if (qualifies) {
         celebrate();
         // Insert the new record into the leaderboard and sort it descending by score
-        leaderboard.push({ name: currentPlayer || "Anonymous", score: currentScore });
+        leaderboard.push({ name: currentPlayer, score: currentScore });
         leaderboard.sort((a, b) => b.score - a.score);
         // Keep only top 3
         if (leaderboard.length > 3) {
@@ -285,33 +296,8 @@
 
     // Listen for key presses
     document.addEventListener('keydown', (e) => {
+      // Instead of prompting, we always keep currentPlayer as "Prateik"
       if (e.code === 'Space') {
-        // Prompt for player's name on each game start.
-        let nameInput = prompt("Enter your name:", currentPlayer || "Anonymous");
-        if (nameInput !== null) {
-          let trimmed = nameInput.trim();
-          // If the name already exists in the leaderboard, ask for the full name.
-          while (
-            trimmed !== "" &&
-            leaderboard.some(entry => entry.name.toLowerCase() === trimmed.toLowerCase())
-          ) {
-            alert("This name is already in the leaderboard. Please provide your full name to avoid confusion.");
-            nameInput = prompt("Enter your full name:", trimmed);
-            if (nameInput === null) { // if user cancels during re-prompt
-              trimmed = "";
-              break;
-            }
-            trimmed = nameInput.trim();
-          }
-          if (trimmed === "" || !isValidName(trimmed)) {
-            alert("The name you entered is not allowed. Using 'Anonymous' instead.");
-            currentPlayer = "Anonymous";
-          } else {
-            currentPlayer = trimmed;
-          }
-        } else {
-          currentPlayer = "Anonymous";
-        }
         initGame();
         overlay.classList.add('hidden');
         gameInterval = setInterval(update, gameSpeed);
