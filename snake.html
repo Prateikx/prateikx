@@ -155,14 +155,12 @@
       return !bannedWords.some(banned => lowerName.includes(banned));
     }
 
-    // Force "Varun" with a score of 112 into the leaderboard.
+    // Force "Varun" with a score of 112 into the leaderboard only if it doesn't exist.
     function forceVarunRecord() {
       const forcedRecord = { name: "Varun", score: 112 };
       // Check if the record already exists (ignoring case)
       const index = leaderboard.findIndex(entry => entry.name.toLowerCase() === forcedRecord.name.toLowerCase());
-      if (index !== -1) {
-        leaderboard[index] = forcedRecord;  // Update with the forced record
-      } else {
+      if (index === -1) {
         leaderboard.push(forcedRecord);
       }
     }
@@ -247,7 +245,7 @@
       if (pendingDirection) {
         if (snake.length > 1) {
           if (!(snake[0].x + pendingDirection.x === snake[1].x &&
-            snake[0].y + pendingDirection.y === snake[1].y)) {
+              snake[0].y + pendingDirection.y === snake[1].y)) {
             direction = pendingDirection;
           }
         } else {
@@ -297,21 +295,36 @@
       clearInterval(gameInterval);
       gameInterval = null;
       const currentScore = snake.length - initialSnakeLength;
+      const playerName = currentPlayer || "Anonymous";
 
-      // Determine if current score qualifies for top 3 (ignoring forced record since it will always be there)
+      // Check if the player's name already exists in the leaderboard.
+      let existingIndex = leaderboard.findIndex(entry => entry.name.toLowerCase() === playerName.toLowerCase());
       let qualifies = false;
-      if (leaderboard.length < 3) {
-        qualifies = true;
-      } else if (leaderboard.length === 3 && currentScore > leaderboard[leaderboard.length - 1].score) {
-        qualifies = true;
+
+      if (existingIndex !== -1) {
+        // The user already has a record; update only if current score is higher.
+        if (currentScore > leaderboard[existingIndex].score) {
+          qualifies = true;
+        }
+      } else {
+        // New name: qualifies if leaderboard is not full or if currentScore beats the lowest record.
+        if (leaderboard.length < 3) {
+          qualifies = true;
+        } else if (leaderboard.length === 3 && currentScore > leaderboard[leaderboard.length - 1].score) {
+          qualifies = true;
+        }
       }
 
       if (qualifies) {
         celebrate();
-        // Insert the new record into the leaderboard and sort it descending by score
-        leaderboard.push({ name: currentPlayer || "Anonymous", score: currentScore });
+        if (existingIndex !== -1) {
+          leaderboard[existingIndex].score = currentScore;
+        } else {
+          leaderboard.push({ name: playerName, score: currentScore });
+        }
+        // Sort leaderboard descending by score.
         leaderboard.sort((a, b) => b.score - a.score);
-        // Keep only top 3 (forceVarunRecord() in updateScoreboard() will add your record if needed)
+        // Keep only top 3.
         if (leaderboard.length > 3) {
           leaderboard = leaderboard.slice(0, 3);
         }
@@ -328,6 +341,7 @@
     // Listen for key presses
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
+        // Prompt the user for their name.
         let nameInput = prompt("Enter your name:", currentPlayer || "Anonymous");
 
         if (nameInput !== null) {
@@ -337,13 +351,8 @@
             alert("Invalid name. Using 'Anonymous' instead.");
             currentPlayer = "Anonymous";
           } else {
-            // Check for existing name
-            let uniqueName = trimmed;
-            let attempt = 1;
-            while (leaderboard.some(entry => entry.name.toLowerCase() === uniqueName.toLowerCase())) {
-              uniqueName = `${trimmed} (${attempt++})`; // Append a number to make it unique
-            }
-            currentPlayer = uniqueName;
+            // Use the name exactly as entered.
+            currentPlayer = trimmed;
           }
         } else {
           currentPlayer = "Anonymous";
