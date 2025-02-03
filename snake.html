@@ -111,6 +111,8 @@
     <h1>Snake Game</h1>
     <p>Press Space to Start / Restart</p>
     <p>Use W, A, S, D keys or the Arrow keys to control the snake</p>
+    <p>Hold Shift to boost speed</p>
+    <p>Press P to pause/resume and R to restart</p>
   </div>
   <!-- Game Canvas -->
   <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -127,7 +129,12 @@
     const canvasHeight = canvas.height;
     const columns = canvasWidth / gridSize;
     const rows = canvasHeight / gridSize;
-    const gameSpeed = 100;             // Speed (in milliseconds) of game update
+    
+    // Speed variables: normal and boost speeds
+    let normalSpeed = 100;             // Normal game update interval (ms)
+    let boostSpeed = 50;               // Boosted game update interval (ms)
+    let boostActive = false;           // Flag to track if shift-boost is active
+
     const initialSnakeLength = 5;      // Starting length of the snake
 
     // Game state variables
@@ -137,6 +144,7 @@
     let food = { x: 0, y: 0 };
     let gameInterval = null;
     let currentPlayer = "";            // Player name for the current session
+    let isPaused = false;              // Track whether the game is paused
 
     // Leaderboard (top 3) storage from localStorage (or empty array)
     let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
@@ -214,7 +222,7 @@
     function initGame() {
       snake = [];
       const startX = Math.floor(columns / 2);
-      const startY = Math.floor(rows / 2);
+      const startY = Math.floor(rows / gridSize); // using rows to calculate the Y position
       for (let i = 0; i < initialSnakeLength; i++) {
         snake.push({ x: startX - i, y: startY });
       }
@@ -338,8 +346,9 @@
       }, qualifies ? 4000 : 0);
     }
 
-    // Listen for key presses
+    // Listen for key presses (for game controls and starting the game)
     document.addEventListener('keydown', (e) => {
+      // Start game with Space if no game is running.
       if (e.code === 'Space') {
         // Prompt the user for their name.
         let nameInput = prompt("Enter your name:", currentPlayer || "Anonymous");
@@ -358,14 +367,43 @@
           currentPlayer = "Anonymous";
         }
 
-        console.log("Starting game with player:", currentPlayer); // Debugging log
+        console.log("Starting game with player:", currentPlayer);
 
         initGame();
         overlay.classList.add('hidden');
         if (gameInterval) clearInterval(gameInterval);
-        gameInterval = setInterval(update, gameSpeed);
+        gameInterval = setInterval(update, normalSpeed);
+        isPaused = false;
+        return;
       }
 
+      // Pause/Resume when pressing "P"
+      if (e.key.toLowerCase() === 'p') {
+        if (!isPaused && gameInterval !== null) {
+          clearInterval(gameInterval);
+          isPaused = true;
+          overlay.innerHTML = '<h1>Paused</h1><p>Press P to resume, R to restart</p>';
+          overlay.classList.remove('hidden');
+        } else if (isPaused) {
+          isPaused = false;
+          overlay.classList.add('hidden');
+          gameInterval = setInterval(update, boostActive ? boostSpeed : normalSpeed);
+        }
+        return;
+      }
+
+      // Restart the game when pressing "R"
+      if (e.key.toLowerCase() === 'r') {
+        if (gameInterval) clearInterval(gameInterval);
+        isPaused = false;
+        // Restart without prompting for name (keeping the same name)
+        initGame();
+        overlay.classList.add('hidden');
+        gameInterval = setInterval(update, normalSpeed);
+        return;
+      }
+
+      // Directional controls
       let newDir = null;
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
         newDir = { x: 0, y: -1 };
@@ -378,6 +416,22 @@
       }
       if (newDir) {
         pendingDirection = newDir;
+      }
+
+      // Check for Shift key to boost speed.
+      if (e.key === 'Shift' && !boostActive && gameInterval !== null) {
+        boostActive = true;
+        clearInterval(gameInterval);
+        gameInterval = setInterval(update, boostSpeed);
+      }
+    });
+
+    // Listen for keyup events to detect when the Shift key is released.
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift' && boostActive && gameInterval !== null) {
+        boostActive = false;
+        clearInterval(gameInterval);
+        gameInterval = setInterval(update, normalSpeed);
       }
     });
 
