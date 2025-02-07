@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Snake Game with Top 3 Leaderboard & Unique Names</title>
+  <style>
+    /* Basic reset and full viewport styling */
+    body {
+      margin: 0;
+      background: #222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      color: white;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Style for the game canvas */
+    canvas {
+      background: #333;
+      border: 5px solid #555;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Overlay instructions before starting/restarting */
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #overlay.hidden {
+      display: none;
+    }
+
+    #overlay h1 {
+      font-size: 48px;
+      margin: 0;
+    }
+
+    #overlay p {
+      font-size: 24px;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    /* Scoreboard in the top-left corner */
+    #scoreboard {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 16px;
+      z-index: 20;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 12px;
+      border-radius: 4px;
+      line-height: 1.5;
+      max-width: 250px;
+    }
+
+    /* Celebration message styling */
+    .celebration {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: bold;
+      color: #FFD700;
+      z-index: 30;
+      animation: fadeOut 4s forwards;
+      pointer-events: none;
+    }
+
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+      }
+
+      80% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Scoreboard -->
+  <div id="scoreboard">
+    <!-- This will be updated by JavaScript -->
+  </div>
+  <!-- Overlay instructions -->
+  <div id="overlay">
+    <h1>Snake Game</h1>
+    <p>Press Space to Start / Restart</p>
+    <p>Use W, A, S, D keys or the Arrow keys to control the snake</p>
+    <p>Hold Shift to boost speed</p>
+    <p>Press P to pause/resume and R to restart</p>
+  </div>
+  <!-- Game Canvas -->
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const scoreboard = document.getElementById('scoreboard');
+
+    // Configuration values
+    const gridSize = 20;               // Pixel size of each cell
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const columns = canvasWidth / gridSize;
+    const rows = canvasHeight / gridSize;
+    
+    // Speed variables: normal and boost speeds
+    let normalSpeed = 100;             // Normal game update interval (ms)
+    let boostSpeed = 50;               // Boosted game update interval (ms)
+    let boostActive = false;           // Flag to track if shift-boost is active
+
+    const initialSnakeLength = 5;      // Starting length of the snake
+
+    // Game state variables
+    let snake = [];
+    let direction = { x: 0, y: 0 };
+    let pendingDirection = null;       // Queue for new directions
+    let food = { x: 0, y: 0 };
+    let gameInterval = null;
+    let currentPlayer = "";            // Player name for the current session
+    let isPaused = false;              // Track whether the game is paused
+
+    // Leaderboard (top 3) storage from localStorage (or empty array)
+    let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
+    // Banned words list for harmful or sexual names (adjust as needed)
+    const bannedWords = [
+      // English profanity
+      "fuck", "shit", "sex", "bitch", "ass", "cunt", "nigger", "faggot", "dick", "cock", "pussy", "badword", "anotherbadword", "xxx", "fuck",
+      // Common Hindi profanity (offensive terms)
+      "madarchod", "chutiya", "bhosdike", "bhadve", "randi", "gandu", "harami", "kamina", "launda", "saala", "bhosadi", "kaminey"
+    ];
+
+    // Function to check if the name is valid (does not contain banned words)
+    function isValidName(name) {
+      const lowerName = name.toLowerCase();
+      return !bannedWords.some(banned => lowerName.includes(banned));
+    }
+
+    // Force "Varun" with a score of 112 into the leaderboard only if it doesn't exist.
+    function forceVarunRecord() {
+      const forcedRecord = { name: "Varun", score: 112 };
+      // Check if the record already exists (ignoring case)
+      const index = leaderboard.findIndex(entry => entry.name.toLowerCase() === forcedRecord.name.toLowerCase());
+      if (index === -1) {
+        leaderboard.push(forcedRecord);
+      }
+    }
+
+    // Update the scoreboard display to include current player's details and top 3 records.
+    function updateScoreboard() {
+      // Always force "Varun" into the leaderboard before displaying.
+      forceVarunRecord();
+
+      // Sort the leaderboard descending by score.
+      leaderboard.sort((a, b) => b.score - a.score);
+      // Keep only top 3 entries.
+      if (leaderboard.length > 3) {
+        leaderboard = leaderboard.slice(0, 3);
+      }
+      // Save the updated leaderboard.
+      localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
+      const currentScore = snake.length - initialSnakeLength;
+
+      let leaderboardHTML = "";
+      if (leaderboard.length > 0) {
+        leaderboardHTML += "<strong>Top 3 Records:</strong><br>";
+        leaderboard.forEach((entry, index) => {
+          leaderboardHTML += `${index + 1}. ${entry.name} (${entry.score})<br>`;
+        });
+      } else {
+        leaderboardHTML += "No records yet<br>";
+      }
+
+      scoreboard.innerHTML =
+        `<strong>Current Player:</strong> ${currentPlayer || "Anonymous"}<br>` +
+        `<strong>Score:</strong> ${currentScore}<br><br>` +
+        leaderboardHTML +
+        `<br><em>Your name will appear here if you break one of the top 3 records!</em>`;
+    }
+
+    // Function to trigger celebration effect when a new top record is reached
+    function celebrate() {
+      const celebration = document.createElement("div");
+      celebration.className = "celebration";
+      celebration.innerHTML = "New Top Record!";
+      document.body.appendChild(celebration);
+      // Remove after 4 seconds
+      setTimeout(() => {
+        celebration.remove();
+      }, 4000);
+    }
+
+    // Initialize the game state
+    function initGame() {
+      snake = [];
+      const startX = Math.floor(columns / 2);
+      const startY = Math.floor(rows / gridSize); // using rows to calculate the Y position
+      for (let i = 0; i < initialSnakeLength; i++) {
+        snake.push({ x: startX - i, y: startY });
+      }
+      const directions = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 }
+      ];
+      direction = directions[Math.floor(Math.random() * directions.length)];
+      pendingDirection = direction;
+      placeFood();
+      updateScoreboard();
+    }
+
+    // Place food in a random location not occupied by the snake
+    function placeFood() {
+      let valid = false;
+      while (!valid) {
+        food.x = Math.floor(Math.random() * columns);
+        food.y = Math.floor(Math.random() * rows);
+        valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
+      }
+    }
+
+    // Update game state
+    function update() {
+      if (pendingDirection) {
+        if (snake.length > 1) {
+          if (!(snake[0].x + pendingDirection.x === snake[1].x &&
+              snake[0].y + pendingDirection.y === snake[1].y)) {
+            direction = pendingDirection;
+          }
+        } else {
+          direction = pendingDirection;
+        }
+        pendingDirection = null;
+      }
+
+      const head = snake[0];
+      const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+
+      // Check for wall collision
+      if (newHead.x < 0 || newHead.x >= columns || newHead.y < 0 || newHead.y >= rows) {
+        return endGame();
+      }
+      // Check for self collision
+      if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+        return endGame();
+      }
+
+      snake.unshift(newHead);
+      if (newHead.x === food.x && newHead.y === food.y) {
+        placeFood();
+      } else {
+        snake.pop();
+      }
+      updateScoreboard();
+      draw();
+    }
+
+    // Draw the current game state
+    function draw() {
+      ctx.fillStyle = '#333';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      // Draw food
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+      // Draw snake
+      snake.forEach((segment, index) => {
+        ctx.fillStyle = index === 0 ? '#2ecc71' : '#27ae60';
+        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+      });
+    }
+
+    // End the game, update leaderboard and manage overlay display.
+    function endGame() {
+      clearInterval(gameInterval);
+      gameInterval = null;
+      const currentScore = snake.length - initialSnakeLength;
+      const playerName = currentPlayer || "Anonymous";
+
+      // Check if the player's name already exists in the leaderboard.
+      let existingIndex = leaderboard.findIndex(entry => entry.name.toLowerCase() === playerName.toLowerCase());
+      let qualifies = false;
+
+      if (existingIndex !== -1) {
+        // The user already has a record; update only if current score is higher.
+        if (currentScore > leaderboard[existingIndex].score) {
+          qualifies = true;
+        }
+      } else {
+        // New name: qualifies if leaderboard is not full or if currentScore beats the lowest record.
+        if (leaderboard.length < 3) {
+          qualifies = true;
+        } else if (leaderboard.length === 3 && currentScore > leaderboard[leaderboard.length - 1].score) {
+          qualifies = true;
+        }
+      }
+
+      if (qualifies) {
+        celebrate();
+        if (existingIndex !== -1) {
+          leaderboard[existingIndex].score = currentScore;
+        } else {
+          leaderboard.push({ name: playerName, score: currentScore });
+        }
+        // Sort leaderboard descending by score.
+        leaderboard.sort((a, b) => b.score - a.score);
+        // Keep only top 3.
+        if (leaderboard.length > 3) {
+          leaderboard = leaderboard.slice(0, 3);
+        }
+        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+      }
+
+      updateScoreboard();
+      // Delay overlay re-display until after the celebration finishes (if any)
+      setTimeout(() => {
+        overlay.classList.remove('hidden');
+      }, qualifies ? 4000 : 0);
+    }
+
+    // Listen for key presses (for game controls and starting the game)
+    document.addEventListener('keydown', (e) => {
+      // Start game with Space if no game is running.
+      if (e.code === 'Space') {
+        // Prompt the user for their name.
+        let nameInput = prompt("Enter your name:", currentPlayer || "Anonymous");
+
+        if (nameInput !== null) {
+          let trimmed = nameInput.trim();
+
+          if (trimmed === "" || !isValidName(trimmed)) {
+            alert("Invalid name. Using 'Anonymous' instead.");
+            currentPlayer = "Anonymous";
+          } else {
+            // Use the name exactly as entered.
+            currentPlayer = trimmed;
+          }
+        } else {
+          currentPlayer = "Anonymous";
+        }
+
+        console.log("Starting game with player:", currentPlayer);
+
+        initGame();
+        overlay.classList.add('hidden');
+        if (gameInterval) clearInterval(gameInterval);
+        gameInterval = setInterval(update, normalSpeed);
+        isPaused = false;
+        return;
+      }
+
+      // Pause/Resume when pressing "P"
+      if (e.key.toLowerCase() === 'p') {
+        if (!isPaused && gameInterval !== null) {
+          clearInterval(gameInterval);
+          isPaused = true;
+          overlay.innerHTML = '<h1>Paused</h1><p>Press P to resume, R to restart</p>';
+          overlay.classList.remove('hidden');
+        } else if (isPaused) {
+          isPaused = false;
+          overlay.classList.add('hidden');
+          gameInterval = setInterval(update, boostActive ? boostSpeed : normalSpeed);
+        }
+        return;
+      }
+
+      // Restart the game when pressing "R"
+      if (e.key.toLowerCase() === 'r') {
+        if (gameInterval) clearInterval(gameInterval);
+        isPaused = false;
+        // Restart without prompting for name (keeping the same name)
+        initGame();
+        overlay.classList.add('hidden');
+        gameInterval = setInterval(update, normalSpeed);
+        return;
+      }
+
+      // Directional controls
+      let newDir = null;
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+        newDir = { x: 0, y: -1 };
+      } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+        newDir = { x: -1, y: 0 };
+      } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+        newDir = { x: 0, y: 1 };
+      } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+        newDir = { x: 1, y: 0 };
+      }
+      if (newDir) {
+        pendingDirection = newDir;
+      }
+
+      // Check for Shift key to boost speed.
+      if (e.key === 'Shift' && !boostActive && gameInterval !== null) {
+        boostActive = true;
+        clearInterval(gameInterval);
+        gameInterval = setInterval(update, boostSpeed);
+      }
+    });
+
+    // Listen for keyup events to detect when the Shift key is released.
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift' && boostActive && gameInterval !== null) {
+        boostActive = false;
+        clearInterval(gameInterval);
+        gameInterval = setInterval(update, normalSpeed);
+      }
+    });
+
+    // Draw initial state and update scoreboard.
+    draw();
+    updateScoreboard();
+  </script>
+</body>
+
+</html>
