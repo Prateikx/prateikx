@@ -1,0 +1,96 @@
+/* Sidebar Styles */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background-color: #2c2c2c;
+    color: #fff;
+    padding: 1rem;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-100%);
+    z-index: 2000; /* Ensures it's above other elements */
+}
+
+/* Show sidebar when class is added */
+.sidebar.show {
+    transform: translateX(0);
+}
+
+/* Sidebar Links */
+.sidebar h2 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    margin: 0.5rem 0;
+}
+
+.sidebar a {
+    color: #fff;
+    text-decoration: none;
+    display: block;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.sidebar a:hover {
+    background-color: #444;
+}
+
+/* Sidebar Toggle Button */
+.toggle-btn {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    background-color: #1c1c1c;
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    border-radius: 4px;
+    z-index: 2100; /* Above everything */
+}
+
+.toggle-btn:hover {
+    background-color: #444;
+}
+
+/* Main Content - Default (without sidebar) */
+.main-content {
+    margin-left: 0;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+/* Shift content when sidebar is open */
+.main-content.shifted {
+    margin-left: 250px;
+}
+
+/* Fix Navbar */
+.navbar {
+    z-index: 1500; /* Ensures it is below sidebar */
+    position: relative;
+}
+
+/* Fix Section Colors */
+#work {
+    background: #111; /* Dark background */
+    color: #fff; /* White text for contrast */
+    padding: 50px;
+}
+
+#projects {
+    background: #eee; /* Light background */
+    color: #333; /* Dark text */
+    padding: 50px;
+}

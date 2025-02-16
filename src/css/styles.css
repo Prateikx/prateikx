@@ -1,75 +1,74 @@
 /* Reset some basic elements (optional) */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  body {
-    display: flex; /* Let the body container hold the sidebar and main content side by side */
-    font-family: Arial, sans-serif;
-    background-color: #111; /* Dark background behind everything */
-    color: #fff; /* Default text color */
-  }
-  
-  /* Sidebar container */
-  .sidebar {
-    width: 280px;
-    background-color: #1c1c1c;
-    min-height: 100vh; /* Fill vertical space */
-    padding: 20px;
-    border-right: 1px solid #333;
-  }
-  
-  /* Sidebar title (like "Settings & Activity") */
-  .sidebar-title {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-  
-  /* Subtitles like "For Professionals" */
-  .sidebar-subtitle {
-    font-size: 14px;
-    margin: 20px 0 10px;
-    color: #aaa; /* Lighter color for subtitle */
-  }
-  
-  /* The nav and list styling */
-  .sidebar-menu {
-    list-style: none;
-    margin-bottom: 20px;
-  }
-  
-  /* Each menu item */
-  .sidebar-menu li {
-    margin: 8px 0;
-  }
-  
-  .sidebar-menu a {
-    display: flex; /* So icon and text can align side by side */
-    align-items: center;
-    text-decoration: none;
-    color: #fff;
-    padding: 8px 0;
-    transition: background 0.3s;
-  }
-  
-  .sidebar-menu a:hover {
-    background-color: #333;
-    border-radius: 4px;
-  }
-  
-  .sidebar-menu i {
-    font-size: 18px;
-    width: 30px; /* fixed width so icons align vertically */
-    text-align: center;
-    margin-right: 10px;
-  }
-  
-  /* Main content area */
-  .content {
-    flex: 1; /* Fill the remaining space */
-    padding: 20px;
-    background-color: #222;
-  }
-  
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  display: flex; /* Let the body container hold the sidebar and main content side by side */
+  font-family: Arial, sans-serif;
+  background-color: #111; /* Dark background behind everything */
+  color: #fff; /* Default text color */
+}
+
+/* Sidebar container */
+.sidebar {
+  width: 280px;
+  background-color: #1c1c1c;
+  min-height: 100vh; /* Fill vertical space */
+  padding: 20px;
+  border-right: 1px solid #333;
+}
+
+/* Sidebar title (like "Settings & Activity") */
+.sidebar-title {
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+/* Subtitles like "For Professionals" */
+.sidebar-subtitle {
+  font-size: 14px;
+  margin: 20px 0 10px;
+  color: #aaa; /* Lighter color for subtitle */
+}
+
+/* The nav and list styling */
+.sidebar-menu {
+  list-style: none;
+  margin-bottom: 20px;
+}
+
+/* Each menu item */
+.sidebar-menu li {
+  margin: 8px 0;
+}
+
+.sidebar-menu a {
+  display: flex; /* So icon and text can align side by side */
+  align-items: center;
+  text-decoration: none;
+  color: #fff;
+  padding: 8px 0;
+  transition: background 0.3s;
+}
+
+.sidebar-menu a:hover {
+  background-color: #333;
+  border-radius: 4px;
+}
+
+.sidebar-menu i {
+  font-size: 18px;
+  width: 30px; /* fixed width so icons align vertically */
+  text-align: center;
+  margin-right: 10px;
+}
+
+/* Main content area */
+.content {
+  flex: 1; /* Fill the remaining space */
+  padding: 20px;
+  background-color: #222;
+}
