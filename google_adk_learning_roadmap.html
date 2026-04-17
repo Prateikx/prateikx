@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google ADK Learning Roadmap</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f5f3;
+    color: #1a1a18;
+    padding: 2rem 1rem;
+  }
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f1efe8;
+    --color-background-info: #e6f1fb;
+    --color-text-primary: #1a1a18;
+    --color-text-secondary: #5f5e5a;
+    --color-text-tertiary: #888780;
+    --color-text-info: #185fa5;
+    --color-border-tertiary: rgba(0,0,0,0.12);
+    --color-border-secondary: rgba(0,0,0,0.22);
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --gap: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1c1c1a; color: #e2e0d6; }
+    :root {
+      --color-background-primary: #2c2c2a;
+      --color-background-secondary: #242422;
+      --color-background-info: #0c2240;
+      --color-text-primary: #e2e0d6;
+      --color-text-secondary: #b4b2a9;
+      --color-text-tertiary: #888780;
+      --color-text-info: #85b7eb;
+      --color-border-tertiary: rgba(255,255,255,0.1);
+      --color-border-secondary: rgba(255,255,255,0.2);
+    }
+  }
+
+  .roadmap { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+  .phase-row { display: flex; gap: var(--gap); margin-bottom: var(--gap); align-items: stretch; }
+  .phase-label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.08em; min-width: 20px; display: flex; align-items: center; justify-content: center; }
+  .cards { display: flex; gap: var(--gap); flex: 1; align-items: stretch; }
+  .card { flex: 1; border-radius: var(--border-radius-lg); border: 0.5px solid var(--color-border-tertiary); padding: 14px 16px; background: var(--color-background-primary); transition: border-color 0.15s; }
+  .card:hover { border-color: var(--color-border-secondary); }
+  .card-badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 99px; margin-bottom: 8px; }
+  .card h3 { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 6px; }
+  .card ul { margin: 0; padding: 0 0 0 14px; }
+  .card ul li { font-size: 12px; color: var(--color-text-secondary); line-height: 1.6; }
+  .connector { display: flex; justify-content: center; margin: 2px 0 2px 28px; }
+  .connector-line { width: 2px; height: 20px; background: var(--color-border-tertiary); border-radius: 1px; }
+  .phase-header { display: flex; align-items: center; gap: 10px; margin: 0 0 10px 28px; }
+  .phase-tag { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
+
+  .p1 { background: #e6f1fb; color: #185fa5; }
+  .p1-card { border-left: 3px solid #378add; }
+  .p2 { background: #e1f5ee; color: #0f6e56; }
+  .p2-card { border-left: 3px solid #1d9e75; }
+  .p3 { background: #eeedfe; color: #534ab7; }
+  .p3-card { border-left: 3px solid #7f77dd; }
+  .p4 { background: #faeeda; color: #854f0b; }
+  .p4-card { border-left: 3px solid #ba7517; }
+  .p5 { background: #eaf3de; color: #3b6d11; }
+  .p5-card { border-left: 3px solid #639922; }
+
+  .badge-concept { background: #eeedfe; color: #534ab7; }
+  .badge-tool { background: #e6f1fb; color: #185fa5; }
+  .badge-build { background: #e1f5ee; color: #0f6e56; }
+  .badge-advanced { background: #faeeda; color: #854f0b; }
+  .badge-expert { background: #eaf3de; color: #3b6d11; }
+  .badge-protocol { background: #fbeaf0; color: #993556; }
+
+  .resources { margin-top: 1.5rem; padding: 14px 16px; border-radius: var(--border-radius-lg); background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); margin-left: 28px; }
+  .resource-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .resource-links a { font-size: 11px; color: var(--color-text-info); text-decoration: none; background: var(--color-background-info); padding: 3px 10px; border-radius: 99px; }
+  .resource-links a:hover { opacity: 0.8; }
+
+  code { font-family: monospace; font-size: 11px; }
+
+  @media (max-width: 600px) {
+    .cards { flex-direction: column; }
+    .phase-label { writing-mode: horizontal-tb; transform: none; min-width: unset; min-height: 20px; }
+    .phase-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="roadmap">
+
+  <div style="margin-bottom: 1.5rem; padding-left: 28px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px;">
+    <div>
+      <div style="font-size: 22px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px;">Google ADK mastery roadmap</div>
+      <div style="font-size: 13px; color: var(--color-text-secondary);">From zero to production-grade agent developer</div>
+    </div>
+    <div style="font-size: 12px; color: var(--color-text-tertiary); text-align: right; line-height: 1.6;">Estimated: 3–5 months<br>for expert level</div>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase-header">
+    <span class="phase-tag p1">Phase 1 · Weeks 1–2</span>
+    <span style="font-size: 12px; color: var(--color-text-tertiary)">Foundations &amp; setup</span>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label" style="color: #185fa5;">01</div>
+    <div class="cards">
+      <div class="card p1-card">
+        <span class="card-badge badge-concept">Concept</span>
+        <h3>What is Google ADK?</h3>
+        <ul>
+          <li>ADK architecture overview</li>
+          <li>Agents, Tools, Sessions, Runners</li>
+          <li>ADK vs LangChain vs CrewAI</li>
+          <li>Gemini as the core model</li>
+        </ul>
+      </div>
+      <div class="card p1-card">
+        <span class="card-badge badge-tool">Setup</span>
+        <h3>Environment setup</h3>
+        <ul>
+          <li>Install ADK via <code>pip install google-adk</code></li>
+          <li>Configure Gemini API keys</li>
+          <li>Project directory structure</li>
+          <li>ADK Dev UI (browser-based)</li>
+        </ul>
+      </div>
+      <div class="card p1-card">
+        <span class="card-badge badge-build">Build</span>
+        <h3>Your first agent</h3>
+        <ul>
+          <li>Define an LlmAgent</li>
+          <li>Add Google Search tool</li>
+          <li>Run via CLI &amp; Dev UI</li>
+          <li>Understand session &amp; runner</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- Phase 2 -->
+  <div class="phase-header">
+    <span class="phase-tag p2">Phase 2 · Weeks 3–5</span>
+    <span style="font-size: 12px; color: var(--color-text-tertiary)">Tools &amp; memory</span>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label" style="color: #0f6e56;">02</div>
+    <div class="cards">
+      <div class="card p2-card">
+        <span class="card-badge badge-build">Build</span>
+        <h3>Custom tools</h3>
+        <ul>
+          <li>Function tools via Python docstrings</li>
+          <li>Call real-time APIs</li>
+          <li>OpenAPI spec integration</li>
+          <li>LangChain tool adapters</li>
+        </ul>
+      </div>
+      <div class="card p2-card">
+        <span class="card-badge badge-concept">Concept</span>
+        <h3>Memory &amp; sessions</h3>
+        <ul>
+          <li>Session state &amp; persistence</li>
+          <li>Short-term vs long-term memory</li>
+          <li>Context window management</li>
+          <li>Artifact storage</li>
+        </ul>
+      </div>
+      <div class="card p2-card">
+        <span class="card-badge badge-protocol">Protocol</span>
+        <h3>MCP integration</h3>
+        <ul>
+          <li>Model Context Protocol basics</li>
+          <li>MCP tool servers</li>
+          <li>Connecting external services</li>
+          <li>Tool confirmation (HITL)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- Phase 3 -->
+  <div class="phase-header">
+    <span class="phase-tag p3">Phase 3 · Weeks 6–8</span>
+    <span style="font-size: 12px; color: var(--color-text-tertiary)">Multi-agent systems</span>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label" style="color: #534ab7;">03</div>
+    <div class="cards">
+      <div class="card p3-card">
+        <span class="card-badge badge-build">Build</span>
+        <h3>Workflow agents</h3>
+        <ul>
+          <li>SequentialAgent for pipelines</li>
+          <li>ParallelAgent for concurrency</li>
+          <li>LoopAgent for iteration</li>
+          <li>Passing state between agents</li>
+        </ul>
+      </div>
+      <div class="card p3-card">
+        <span class="card-badge badge-concept">Pattern</span>
+        <h3>Agent orchestration</h3>
+        <ul>
+          <li>Agent-as-a-Tool pattern</li>
+          <li>Hierarchical agent trees</li>
+          <li>Root agent with sub-agents</li>
+          <li>Specialist agent design</li>
+        </ul>
+      </div>
+      <div class="card p3-card">
+        <span class="card-badge badge-tool">Debug</span>
+        <h3>Testing &amp; evaluation</h3>
+        <ul>
+          <li>ADK visual debugger</li>
+          <li>Execution trajectory tracing</li>
+          <li>Custom eval metrics</li>
+          <li>Simulating user interactions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- Phase 4 -->
+  <div class="phase-header">
+    <span class="phase-tag p4">Phase 4 · Weeks 9–13</span>
+    <span style="font-size: 12px; color: var(--color-text-tertiary)">Production &amp; deployment</span>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label" style="color: #854f0b;">04</div>
+    <div class="cards">
+      <div class="card p4-card">
+        <span class="card-badge badge-advanced">Deploy</span>
+        <h3>Cloud deployment</h3>
+        <ul>
+          <li>Vertex AI Agent Engine</li>
+          <li>Cloud Run containerization</li>
+          <li>GKE for scale</li>
+          <li>One-command deployment</li>
+        </ul>
+      </div>
+      <div class="card p4-card">
+        <span class="card-badge badge-advanced">Ops</span>
+        <h3>Security &amp; observability</h3>
+        <ul>
+          <li>Authentication &amp; IAM</li>
+          <li>Cloud Trace integration</li>
+          <li>Token usage monitoring</li>
+          <li>Cost management</li>
+        </ul>
+      </div>
+      <div class="card p4-card">
+        <span class="card-badge badge-advanced">Scale</span>
+        <h3>Performance tuning</h3>
+        <ul>
+          <li>Context filtering &amp; lazy loading</li>
+          <li>Parallel execution patterns</li>
+          <li>Model selection strategy</li>
+          <li>Agent Starter Pack templates</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-line"></div></div>
+
+  <!-- Phase 5 -->
+  <div class="phase-header">
+    <span class="phase-tag p5">Phase 5 · Ongoing</span>
+    <span style="font-size: 12px; color: var(--color-text-tertiary)">Expert-level mastery</span>
+  </div>
+  <div class="phase-row">
+    <div class="phase-label" style="color: #3b6d11;">05</div>
+    <div class="cards">
+      <div class="card p5-card">
+        <span class="card-badge badge-expert">Expert</span>
+        <h3>Enterprise patterns</h3>
+        <ul>
+          <li>Multi-model agent designs</li>
+          <li>Custom service registries</li>
+          <li>Code execution sandbox</li>
+          <li>Session rewind &amp; recovery</li>
+        </ul>
+      </div>
+      <div class="card p5-card">
+        <span class="card-badge badge-expert">Community</span>
+        <h3>Stay current</h3>
+        <ul>
+          <li>Follow ADK GitHub releases</li>
+          <li>Google Cloud Blog ADK posts</li>
+          <li>Google Skills ADK courses</li>
+          <li>Earn Google Cloud badge</li>
+        </ul>
+      </div>
+      <div class="card p5-card">
+        <span class="card-badge badge-expert">Portfolio</span>
+        <h3>Capstone projects</h3>
+        <ul>
+          <li>Multi-agent travel planner</li>
+          <li>Automated research system</li>
+          <li>Code review agent team</li>
+          <li>Enterprise RAG + agents</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resources -->
+  <div class="resources">
+    <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 8px;">Key resources</div>
+    <div class="resource-links">
+      <a href="https://google.github.io/adk-docs" target="_blank">ADK Docs ↗</a>
+      <a href="https://github.com/google/adk-python" target="_blank">GitHub adk-python ↗</a>
+      <a href="https://www.skills.google/course_templates/1382" target="_blank">Google Skills Course ↗</a>
+      <a href="https://codelabs.developers.google.com/onramp/instructions" target="_blank">ADK Crash Codelab ↗</a>
+      <a href="https://cloud.google.com/blog/products/ai-machine-learning/build-multi-agentic-systems-using-google-adk" target="_blank">Multi-agent blog ↗</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
