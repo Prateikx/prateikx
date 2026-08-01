@@ -1,443 +1,611 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <title>Snake Game with Top 3 Leaderboard & Unique Names</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake — Prateek Choukikar</title>
+  <meta name="description" content="Classic Snake with a live top-3 leaderboard. Beat the high score if you can." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
   <style>
-    /* Basic reset and full viewport styling */
+    :root {
+      --bg: #0a0918;
+      --surface: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #eceaf6;
+      --text-muted: #9b97b8;
+      --blue: #5b73e9;
+      --purple: #a873c2;
+      --rose: #d86e6e;
+      --green: #4ade80;
+      --gradient: linear-gradient(120deg, var(--blue), var(--purple), var(--rose));
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
     body {
-      margin: 0;
-      background: #222;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      font-family: Arial, sans-serif;
-      color: white;
+      gap: 14px;
       overflow: hidden;
+      padding: 12px;
+      touch-action: none;
+    }
+
+    .bg-blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(110px); opacity: 0.28; }
+    .blob-1 { width: 480px; height: 480px; background: #302b63; top: -140px; left: -120px; }
+    .blob-2 { width: 400px; height: 400px; background: #5b73e9; bottom: -160px; right: -140px; opacity: 0.14; }
+
+    /* Top bar: back link + title + score */
+    .topbar {
+      width: min(92vw, 720px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .topbar a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 7px 14px;
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .topbar a:hover { color: var(--text); border-color: var(--purple); }
+
+    .topbar .title {
+      font-family: 'Sora', sans-serif;
+      font-weight: 800;
+      font-size: 1.05rem;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+
+    .hud {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .hud strong { color: var(--text); font-weight: 500; }
+
+    /* Game area */
+    .stage {
       position: relative;
+      width: min(92vw, 720px);
+      aspect-ratio: 4 / 3;
+      max-height: 72vh;
     }
 
-    /* Style for the game canvas */
     canvas {
-      background: #333;
-      border: 5px solid #555;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #0e0c22;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     }
 
-    /* Overlay instructions before starting/restarting */
+    /* Overlay (start / pause / game over) */
     #overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.5);
+      inset: 0;
       z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 10px;
+      text-align: center;
+      background: rgba(10, 9, 24, 0.82);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 24px;
     }
 
-    #overlay.hidden {
-      display: none;
-    }
+    #overlay.hidden { display: none; }
 
     #overlay h1 {
-      font-size: 48px;
-      margin: 0;
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
-    #overlay p {
-      font-size: 24px;
-      margin-top: 10px;
+    #overlay .msg { color: var(--text-muted); font-size: 0.95rem; max-width: 420px; }
+
+    #overlay .keys {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 2;
+    }
+
+    #overlay .keys kbd {
+      font-family: inherit;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      color: var(--text);
+    }
+
+    #nameInput {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 16px;
+      width: min(260px, 70vw);
       text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
     }
 
-    /* Scoreboard in the top-left corner */
-    #scoreboard {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      color: white;
-      font-size: 16px;
-      z-index: 20;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 8px 12px;
-      border-radius: 4px;
-      line-height: 1.5;
-      max-width: 250px;
+    #nameInput:focus { border-color: var(--purple); }
+    #nameInput::placeholder { color: var(--text-muted); }
+
+    .play-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--gradient);
+      border: none;
+      border-radius: 12px;
+      padding: 12px 30px;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(91, 115, 233, 0.35);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    /* Celebration message styling */
-    .celebration {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 48px;
-      font-weight: bold;
-      color: #FFD700;
-      z-index: 30;
-      animation: fadeOut 4s forwards;
-      pointer-events: none;
+    .play-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(168, 115, 194, 0.45); }
+
+    /* Leaderboard */
+    #board {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.9;
     }
 
-    @keyframes fadeOut {
-      0% {
-        opacity: 1;
-      }
+    #board .medal { margin-right: 6px; }
+    #board .lb-name { color: var(--text); }
 
-      80% {
-        opacity: 1;
-      }
+    .final-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      color: var(--text);
+    }
 
-      100% {
-        opacity: 0;
-      }
+    .record-flash { color: #ffd700; font-weight: 600; animation: flash 1s ease-in-out infinite alternate; }
+
+    @keyframes flash { from { opacity: 1; } to { opacity: 0.55; } }
+
+    /* Mobile hint */
+    .mobile-hint { display: none; }
+
+    @media (hover: none) and (pointer: coarse) {
+      .mobile-hint { display: block; }
+      .desktop-hint { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 
 <body>
-  <!-- Scoreboard -->
-  <div id="scoreboard">
-    <!-- This will be updated by JavaScript -->
+  <div class="bg-blobs" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
   </div>
-  <!-- Overlay instructions -->
-  <div id="overlay">
-    <h1>Snake Game</h1>
-    <p>Press Space to Start / Restart</p>
-    <p>Use W, A, S, D keys or the Arrow keys to control the snake</p>
-    <p>Hold Shift to boost speed</p>
-    <p>Press P to pause/resume and R to restart</p>
+
+  <div class="topbar">
+    <a href="index.html">← Portfolio</a>
+    <span class="title">🐍 SNAKE</span>
+    <span class="hud" id="hud"><strong>0</strong> pts</span>
   </div>
-  <!-- Game Canvas -->
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <div class="stage">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="overlay">
+      <h1 id="ovTitle">Snake</h1>
+      <p class="msg" id="ovMsg">Eat. Grow. Don't hit yourself. Speed ramps up as you score.</p>
+      <div class="final-score" id="ovScore" style="display:none"></div>
+      <div id="board"></div>
+      <input id="nameInput" type="text" maxlength="16" placeholder="Your name" autocomplete="off" />
+      <button class="play-btn" id="playBtn">▶ Play</button>
+      <div class="keys desktop-hint">
+        <kbd>WASD</kbd> / <kbd>↑←↓→</kbd> move &nbsp; <kbd>Shift</kbd> boost &nbsp; <kbd>P</kbd> pause &nbsp; <kbd>R</kbd> restart
+      </div>
+      <div class="keys mobile-hint">Swipe anywhere to steer 👆</div>
+    </div>
+  </div>
 
   <script>
+    'use strict';
+
+    // ===== Config =====
+    const COLS = 32, ROWS = 24;
+    const BASE_STEP = 110;        // ms per move at score 0
+    const MIN_STEP = 55;          // fastest the ramp goes
+    const BOOST_FACTOR = 0.5;     // Shift multiplies step time by this
+    const START_LEN = 5;
+
+    // ===== Elements =====
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const overlay = document.getElementById('overlay');
-    const scoreboard = document.getElementById('scoreboard');
+    const ovTitle = document.getElementById('ovTitle');
+    const ovMsg = document.getElementById('ovMsg');
+    const ovScore = document.getElementById('ovScore');
+    const board = document.getElementById('board');
+    const nameInput = document.getElementById('nameInput');
+    const playBtn = document.getElementById('playBtn');
+    const hud = document.getElementById('hud');
 
-    // Configuration values
-    const gridSize = 20;               // Pixel size of each cell
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    const columns = canvasWidth / gridSize;
-    const rows = canvasHeight / gridSize;
-    
-    // Speed variables: normal and boost speeds
-    let normalSpeed = 100;             // Normal game update interval (ms)
-    let boostSpeed = 50;               // Boosted game update interval (ms)
-    let boostActive = false;           // Flag to track if shift-boost is active
+    // ===== Responsive, crisp canvas =====
+    let cell = 20; // recomputed on resize
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cell = rect.width / COLS;
+      draw();
+    }
+    window.addEventListener('resize', resizeCanvas);
 
-    const initialSnakeLength = 5;      // Starting length of the snake
-
-    // Game state variables
-    let snake = [];
-    let direction = { x: 0, y: 0 };
-    let pendingDirection = null;       // Queue for new directions
+    // ===== State =====
+    let snake = [], dir = { x: 1, y: 0 }, dirQueue = [];
     let food = { x: 0, y: 0 };
-    let gameInterval = null;
-    let currentPlayer = "";            // Player name for the current session
-    let isPaused = false;              // Track whether the game is paused
+    let running = false, paused = false, boost = false;
+    let score = 0;
+    let currentPlayer = localStorage.getItem('snakePlayerName') || '';
+    let lastStep = 0, acc = 0, rafId = null;
 
-    // Leaderboard (top 3) storage from localStorage (or empty array)
-    let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+    // ===== Leaderboard (kept compatible with the old storage key) =====
+    let leaderboard = [];
+    try { leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || []; } catch { leaderboard = []; }
 
-    // Banned words list for harmful or sexual names (adjust as needed)
     const bannedWords = [
-      // English profanity
-      "fuck", "shit", "sex", "bitch", "ass", "cunt", "nigger", "faggot", "dick", "cock", "pussy", "badword", "anotherbadword", "xxx", "fuck",
-      // Common Hindi profanity (offensive terms)
-      "madarchod", "chutiya", "bhosdike", "bhadve", "randi", "gandu", "harami", "kamina", "launda", "saala", "bhosadi", "kaminey"
+      'fuck', 'shit', 'sex', 'bitch', 'ass', 'cunt', 'nigger', 'faggot', 'dick', 'cock', 'pussy', 'xxx',
+      'madarchod', 'chutiya', 'bhosdike', 'bhadve', 'randi', 'gandu', 'harami', 'kamina', 'launda', 'saala', 'bhosadi', 'kaminey'
     ];
+    const isValidName = (name) => !bannedWords.some((w) => name.toLowerCase().includes(w));
 
-    // Function to check if the name is valid (does not contain banned words)
-    function isValidName(name) {
-      const lowerName = name.toLowerCase();
-      return !bannedWords.some(banned => lowerName.includes(banned));
-    }
-
-    // Force "Varun" with a score of 112 into the leaderboard only if it doesn't exist.
-    function forceVarunRecord() {
-      const forcedRecord = { name: "Varun", score: 112 };
-      // Check if the record already exists (ignoring case)
-      const index = leaderboard.findIndex(entry => entry.name.toLowerCase() === forcedRecord.name.toLowerCase());
-      if (index === -1) {
-        leaderboard.push(forcedRecord);
+    function normalizeBoard() {
+      // Long-standing house record — respect the champion.
+      if (!leaderboard.some((e) => e.name.toLowerCase() === 'varun')) {
+        leaderboard.push({ name: 'Varun', score: 112 });
       }
-    }
-
-    // Update the scoreboard display to include current player's details and top 3 records.
-    function updateScoreboard() {
-      // Always force "Varun" into the leaderboard before displaying.
-      forceVarunRecord();
-
-      // Sort the leaderboard descending by score.
       leaderboard.sort((a, b) => b.score - a.score);
-      // Keep only top 3 entries.
-      if (leaderboard.length > 3) {
-        leaderboard = leaderboard.slice(0, 3);
-      }
-      // Save the updated leaderboard.
-      localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-
-      const currentScore = snake.length - initialSnakeLength;
-
-      let leaderboardHTML = "";
-      if (leaderboard.length > 0) {
-        leaderboardHTML += "<strong>Top 3 Records:</strong><br>";
-        leaderboard.forEach((entry, index) => {
-          leaderboardHTML += `${index + 1}. ${entry.name} (${entry.score})<br>`;
-        });
-      } else {
-        leaderboardHTML += "No records yet<br>";
-      }
-
-      scoreboard.innerHTML =
-        `<strong>Current Player:</strong> ${currentPlayer || "Anonymous"}<br>` +
-        `<strong>Score:</strong> ${currentScore}<br><br>` +
-        leaderboardHTML +
-        `<br><em>Your name will appear here if you break one of the top 3 records!</em>`;
+      leaderboard = leaderboard.slice(0, 3);
+      localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
     }
 
-    // Function to trigger celebration effect when a new top record is reached
-    function celebrate() {
-      const celebration = document.createElement("div");
-      celebration.className = "celebration";
-      celebration.innerHTML = "New Top Record!";
-      document.body.appendChild(celebration);
-      // Remove after 4 seconds
-      setTimeout(() => {
-        celebration.remove();
-      }, 4000);
+    function renderBoard() {
+      normalizeBoard();
+      const medals = ['🥇', '🥈', '🥉'];
+      board.innerHTML = leaderboard
+        .map((e, i) => `<div><span class="medal">${medals[i]}</span><span class="lb-name">${escapeHtml(e.name)}</span> — ${e.score}</div>`)
+        .join('');
     }
 
-    // Initialize the game state
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // ===== Game setup =====
     function initGame() {
       snake = [];
-      const startX = Math.floor(columns / 2);
-      const startY = Math.floor(rows / gridSize); // using rows to calculate the Y position
-      for (let i = 0; i < initialSnakeLength; i++) {
-        snake.push({ x: startX - i, y: startY });
-      }
-      const directions = [
-        { x: 1, y: 0 },
-        { x: -1, y: 0 },
-        { x: 0, y: 1 },
-        { x: 0, y: -1 }
-      ];
-      direction = directions[Math.floor(Math.random() * directions.length)];
-      pendingDirection = direction;
+      const sx = Math.floor(COLS / 2), sy = Math.floor(ROWS / 2);
+      for (let i = 0; i < START_LEN; i++) snake.push({ x: sx - i, y: sy });
+      dir = { x: 1, y: 0 }; // body extends left, so always start moving right
+      dirQueue = [];
+      score = 0;
       placeFood();
-      updateScoreboard();
+      updateHud();
     }
 
-    // Place food in a random location not occupied by the snake
     function placeFood() {
-      let valid = false;
-      while (!valid) {
-        food.x = Math.floor(Math.random() * columns);
-        food.y = Math.floor(Math.random() * rows);
-        valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
-      }
+      do {
+        food.x = Math.floor(Math.random() * COLS);
+        food.y = Math.floor(Math.random() * ROWS);
+      } while (snake.some((s) => s.x === food.x && s.y === food.y));
     }
 
-    // Update game state
+    function stepTime() {
+      const ramp = Math.max(MIN_STEP, BASE_STEP - score * 2.2);
+      return boost ? ramp * BOOST_FACTOR : ramp;
+    }
+
+    function updateHud() {
+      const best = leaderboard.length ? leaderboard[0].score : 0;
+      hud.innerHTML = `<strong>${score}</strong> pts&nbsp;·&nbsp;best ${Math.max(best, score)}`;
+    }
+
+    // ===== Game loop (fixed timestep on rAF) =====
+    function loop(now) {
+      rafId = requestAnimationFrame(loop);
+      if (!running || paused) { lastStep = now; return; }
+      acc += now - lastStep;
+      lastStep = now;
+      const step = stepTime();
+      while (acc >= step) {
+        acc -= step;
+        if (!update()) return;
+      }
+      draw();
+    }
+
     function update() {
-      if (pendingDirection) {
-        if (snake.length > 1) {
-          if (!(snake[0].x + pendingDirection.x === snake[1].x &&
-              snake[0].y + pendingDirection.y === snake[1].y)) {
-            direction = pendingDirection;
-          }
-        } else {
-          direction = pendingDirection;
-        }
-        pendingDirection = null;
+      // Consume one queued direction per tick; skip reversals
+      while (dirQueue.length) {
+        const d = dirQueue.shift();
+        if (d.x !== -dir.x || d.y !== -dir.y) { dir = d; break; }
       }
 
-      const head = snake[0];
-      const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
 
-      // Check for wall collision
-      if (newHead.x < 0 || newHead.x >= columns || newHead.y < 0 || newHead.y >= rows) {
-        return endGame();
-      }
-      // Check for self collision
-      if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
-        return endGame();
+      if (
+        head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS ||
+        snake.some((s) => s.x === head.x && s.y === head.y)
+      ) {
+        endGame();
+        return false;
       }
 
-      snake.unshift(newHead);
-      if (newHead.x === food.x && newHead.y === food.y) {
+      snake.unshift(head);
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        updateHud();
         placeFood();
       } else {
         snake.pop();
       }
-      updateScoreboard();
-      draw();
+      return true;
     }
 
-    // Draw the current game state
+    // ===== Rendering =====
     function draw() {
-      ctx.fillStyle = '#333';
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-      // Draw food
-      ctx.fillStyle = '#e74c3c';
-      ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
-      // Draw snake
-      snake.forEach((segment, index) => {
-        ctx.fillStyle = index === 0 ? '#2ecc71' : '#27ae60';
-        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+      const w = canvas.getBoundingClientRect().width;
+      const h = canvas.getBoundingClientRect().height;
+      const cw = w / COLS, ch = h / ROWS;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Subtle grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = 1; x < COLS; x++) { ctx.moveTo(x * cw, 0); ctx.lineTo(x * cw, h); }
+      for (let y = 1; y < ROWS; y++) { ctx.moveTo(0, y * ch); ctx.lineTo(w, y * ch); }
+      ctx.stroke();
+
+      if (!snake.length) return;
+
+      // Food (glowing orb)
+      const fx = (food.x + 0.5) * cw, fy = (food.y + 0.5) * ch;
+      const r = Math.min(cw, ch) * 0.32;
+      ctx.save();
+      ctx.shadowColor = '#d86e6e';
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = '#d86e6e';
+      ctx.beginPath();
+      ctx.arc(fx, fy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Snake (gradient body, rounded segments)
+      snake.forEach((seg, i) => {
+        const t = i / Math.max(snake.length - 1, 1);
+        ctx.fillStyle = i === 0 ? '#4ade80' : lerpColor([91, 115, 233], [168, 115, 194], t);
+        const pad = i === 0 ? 1 : 1.5;
+        roundRect(seg.x * cw + pad, seg.y * ch + pad, cw - pad * 2, ch - pad * 2, Math.min(cw, ch) * 0.3);
+      });
+
+      // Eyes on the head
+      const hd = snake[0];
+      const ex = (hd.x + 0.5) * cw, ey = (hd.y + 0.5) * ch;
+      const off = Math.min(cw, ch) * 0.18;
+      const perp = { x: -dir.y, y: dir.x };
+      ctx.fillStyle = '#0a0918';
+      [1, -1].forEach((side) => {
+        ctx.beginPath();
+        ctx.arc(
+          ex + dir.x * off + perp.x * off * side,
+          ey + dir.y * off + perp.y * off * side,
+          Math.min(cw, ch) * 0.08, 0, Math.PI * 2
+        );
+        ctx.fill();
       });
     }
 
-    // End the game, update leaderboard and manage overlay display.
-    function endGame() {
-      clearInterval(gameInterval);
-      gameInterval = null;
-      const currentScore = snake.length - initialSnakeLength;
-      const playerName = currentPlayer || "Anonymous";
-
-      // Check if the player's name already exists in the leaderboard.
-      let existingIndex = leaderboard.findIndex(entry => entry.name.toLowerCase() === playerName.toLowerCase());
-      let qualifies = false;
-
-      if (existingIndex !== -1) {
-        // The user already has a record; update only if current score is higher.
-        if (currentScore > leaderboard[existingIndex].score) {
-          qualifies = true;
-        }
-      } else {
-        // New name: qualifies if leaderboard is not full or if currentScore beats the lowest record.
-        if (leaderboard.length < 3) {
-          qualifies = true;
-        } else if (leaderboard.length === 3 && currentScore > leaderboard[leaderboard.length - 1].score) {
-          qualifies = true;
-        }
-      }
-
-      if (qualifies) {
-        celebrate();
-        if (existingIndex !== -1) {
-          leaderboard[existingIndex].score = currentScore;
-        } else {
-          leaderboard.push({ name: playerName, score: currentScore });
-        }
-        // Sort leaderboard descending by score.
-        leaderboard.sort((a, b) => b.score - a.score);
-        // Keep only top 3.
-        if (leaderboard.length > 3) {
-          leaderboard = leaderboard.slice(0, 3);
-        }
-        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-      }
-
-      updateScoreboard();
-      // Delay overlay re-display until after the celebration finishes (if any)
-      setTimeout(() => {
-        overlay.classList.remove('hidden');
-      }, qualifies ? 4000 : 0);
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.fill();
     }
 
-    // Listen for key presses (for game controls and starting the game)
+    function lerpColor(a, b, t) {
+      const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+      return `rgb(${c[0]},${c[1]},${c[2]})`;
+    }
+
+    // ===== Start / pause / end =====
+    function startGame() {
+      let name = nameInput.value.trim();
+      if (name && !isValidName(name)) {
+        nameInput.value = '';
+        nameInput.placeholder = 'Nice try. Pick another name 😄';
+        return;
+      }
+      currentPlayer = name || currentPlayer || 'Anonymous';
+      localStorage.setItem('snakePlayerName', currentPlayer);
+
+      initGame();
+      overlay.classList.add('hidden');
+      running = true;
+      paused = false;
+      acc = 0;
+      lastStep = performance.now();
+      if (!rafId) rafId = requestAnimationFrame(loop);
+      draw();
+    }
+
+    function togglePause() {
+      if (!running) return;
+      paused = !paused;
+      if (paused) {
+        showOverlay('Paused', 'Take a breath.', { showInput: false, btnLabel: '▶ Resume' });
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function endGame() {
+      running = false;
+      const name = currentPlayer || 'Anonymous';
+
+      const idx = leaderboard.findIndex((e) => e.name.toLowerCase() === name.toLowerCase());
+      let record = false;
+      if (idx !== -1) {
+        if (score > leaderboard[idx].score) { leaderboard[idx].score = score; record = true; }
+      } else if (leaderboard.length < 3 || score > leaderboard[leaderboard.length - 1].score) {
+        leaderboard.push({ name, score });
+        record = true;
+      }
+      normalizeBoard();
+
+      showOverlay(
+        record ? '🏆 New Record!' : 'Game Over',
+        record ? `${name}, you're on the board!` : 'The snake had other plans.',
+        { showInput: true, btnLabel: '▶ Play again', score }
+      );
+      if (record) ovScore.classList.add('record-flash');
+    }
+
+    function showOverlay(title, msg, opts = {}) {
+      ovTitle.textContent = title;
+      ovMsg.textContent = msg;
+      ovScore.classList.remove('record-flash');
+      if (opts.score !== undefined) {
+        ovScore.style.display = 'block';
+        ovScore.textContent = `Score: ${opts.score}`;
+      } else {
+        ovScore.style.display = 'none';
+      }
+      nameInput.style.display = opts.showInput === false ? 'none' : 'block';
+      playBtn.textContent = opts.btnLabel || '▶ Play';
+      renderBoard();
+      overlay.classList.remove('hidden');
+    }
+
+    // ===== Input =====
+    playBtn.addEventListener('click', () => (paused ? togglePause() : startGame()));
+    nameInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') startGame();
+    });
+
+    const KEY_DIRS = {
+      w: { x: 0, y: -1 }, arrowup: { x: 0, y: -1 },
+      s: { x: 0, y: 1 }, arrowdown: { x: 0, y: 1 },
+      a: { x: -1, y: 0 }, arrowleft: { x: -1, y: 0 },
+      d: { x: 1, y: 0 }, arrowright: { x: 1, y: 0 }
+    };
+
     document.addEventListener('keydown', (e) => {
-      // Start game with Space if no game is running.
-      if (e.code === 'Space') {
-        // Prompt the user for their name.
-        let nameInput = prompt("Enter your name:", currentPlayer || "Anonymous");
+      const key = e.key.toLowerCase();
 
-        if (nameInput !== null) {
-          let trimmed = nameInput.trim();
-
-          if (trimmed === "" || !isValidName(trimmed)) {
-            alert("Invalid name. Using 'Anonymous' instead.");
-            currentPlayer = "Anonymous";
-          } else {
-            // Use the name exactly as entered.
-            currentPlayer = trimmed;
-          }
-        } else {
-          currentPlayer = "Anonymous";
-        }
-
-        console.log("Starting game with player:", currentPlayer);
-
-        initGame();
-        overlay.classList.add('hidden');
-        if (gameInterval) clearInterval(gameInterval);
-        gameInterval = setInterval(update, normalSpeed);
-        isPaused = false;
-        return;
+      if (key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        if (!running) startGame();
+        else if (paused) togglePause();
+        return; // Space never interrupts a live game
       }
+      if (key === 'p') { togglePause(); return; }
+      if (key === 'r') { if (currentPlayer || running) { startGame(); } return; }
+      if (key === 'shift') { boost = true; return; }
 
-      // Pause/Resume when pressing "P"
-      if (e.key.toLowerCase() === 'p') {
-        if (!isPaused && gameInterval !== null) {
-          clearInterval(gameInterval);
-          isPaused = true;
-          overlay.innerHTML = '<h1>Paused</h1><p>Press P to resume, R to restart</p>';
-          overlay.classList.remove('hidden');
-        } else if (isPaused) {
-          isPaused = false;
-          overlay.classList.add('hidden');
-          gameInterval = setInterval(update, boostActive ? boostSpeed : normalSpeed);
-        }
-        return;
-      }
-
-      // Restart the game when pressing "R"
-      if (e.key.toLowerCase() === 'r') {
-        if (gameInterval) clearInterval(gameInterval);
-        isPaused = false;
-        // Restart without prompting for name (keeping the same name)
-        initGame();
-        overlay.classList.add('hidden');
-        gameInterval = setInterval(update, normalSpeed);
-        return;
-      }
-
-      // Directional controls
-      let newDir = null;
-      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
-        newDir = { x: 0, y: -1 };
-      } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
-        newDir = { x: -1, y: 0 };
-      } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
-        newDir = { x: 0, y: 1 };
-      } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-        newDir = { x: 1, y: 0 };
-      }
-      if (newDir) {
-        pendingDirection = newDir;
-      }
-
-      // Check for Shift key to boost speed.
-      if (e.key === 'Shift' && !boostActive && gameInterval !== null) {
-        boostActive = true;
-        clearInterval(gameInterval);
-        gameInterval = setInterval(update, boostSpeed);
+      const d = KEY_DIRS[key];
+      if (d) {
+        e.preventDefault();
+        if (dirQueue.length < 2) dirQueue.push(d);
       }
     });
 
-    // Listen for keyup events to detect when the Shift key is released.
     document.addEventListener('keyup', (e) => {
-      if (e.key === 'Shift' && boostActive && gameInterval !== null) {
-        boostActive = false;
-        clearInterval(gameInterval);
-        gameInterval = setInterval(update, normalSpeed);
-      }
+      if (e.key === 'Shift') boost = false;
     });
 
-    // Draw initial state and update scoreboard.
-    draw();
-    updateScoreboard();
+    // Touch: swipe to steer, double-tap overlay button handled natively
+    let touchStart = null;
+    document.addEventListener('touchstart', (e) => {
+      if (e.target.closest('#overlay') || e.target.closest('.topbar')) return;
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!touchStart || !running || paused) return;
+      const dx = e.touches[0].clientX - touchStart.x;
+      const dy = e.touches[0].clientY - touchStart.y;
+      if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+      const d = Math.abs(dx) > Math.abs(dy)
+        ? { x: Math.sign(dx), y: 0 }
+        : { x: 0, y: Math.sign(dy) };
+      if (dirQueue.length < 2) dirQueue.push(d);
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+
+    // ===== Boot =====
+    nameInput.value = currentPlayer;
+    renderBoard();
+    resizeCanvas();
+    initGame();
+    running = false;
+    rafId = requestAnimationFrame(loop);
   </script>
 </body>
 
