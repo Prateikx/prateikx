@@ -1,0 +1,20 @@
+index.html
+  s_947e1d21d5dc94::t_4979b1507ea16c 566,616-617,619,622,829
+  s_947e1d21d5dc94::t_379409a77c2e63 618
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "084e4e5bcf6d3025c853f0fc7c46a2b95a8cc876",
+  "prompts": {},
+  "sessions": {
+    "s_947e1d21d5dc94": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14097-08f3-7370-8c1c-f0b61697f6a9",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Prateek Choukikar <iampratik8@gmail.com>"
+    }
+  }
+}
